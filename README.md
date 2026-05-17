@@ -4,7 +4,7 @@ Complete intelligence dashboard with 32 months of data, 22 projects, 847 units, 
 
 ## Quick Start
 
-[🚀 LAUNCH DASHBOARD](./index.html)
+https://drjeremykyle-dotcom.github.io/kpi-dashboard/index.html
 
 ## What's Inside
 
