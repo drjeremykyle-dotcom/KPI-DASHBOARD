@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renovation KPI 2.0 — Interactive Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;0,900;1,300&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+ :root {
+ --bg: #0a0c0f;
+ --surface: #111318;
+ --surface2: #181c23;
+ --border: #1f2530;
+ --accent: #c8f04a;
+ --accent2: #4af0c8;
+ --accent3: #f04a7a;
+ --accent4: #f0a84a;
+ --text: #e8eaf0;
+ --muted: #5a6070;
+ --muted2: #8a909f;
+ }
+
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+
+ body {
+ background: var(--bg);
+ color: var(--text);
+ font-family: 'Syne', sans-serif;
+ min-height: 100vh;
+ overflow-x: hidden;
+ }
+
+ body::before {
+ content: '';
+ position: fixed;
+ inset: 0;
+ background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+ pointer-events: none;
+ z-index: 0;
+ opacity: 0.4;
+ }
+
+ .container { max-width: 1600px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+ header {
+ padding: 48px 0 32px;
+ border-bottom: 1px solid var(--border);
+ margin-bottom: 48px;
+ }
+
+ .header-inner { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 24px; }
+
+ .eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+
+ h1 { font-family: 'Fraunces', serif; font-size: clamp(36px, 5vw, 64px); font-weight: 900; line-height: 0.95; letter-spacing: -2px; }
+
+ h1 em { font-style: italic; color: var(--accent); }
+
+ .header-meta { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted2); text-align: right; }
+
+ .header-meta span { display: block; margin-bottom: 4px; }
+
+ .status-dot { display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
+
+ @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+ .nav-tabs {
+ display: flex; gap: 4px; margin-bottom: 40px;
+ background: var(--surface); border: 1px solid var(--border);
+ padding: 4px; border-radius: 8px; width: fit-content; flex-wrap: wrap;
+ }
+
+ .tab-btn {
+ padding: 10px 20px; border: none; background: transparent;
+ color: var(--muted2); cursor: pointer; border-radius: 6px;
+ font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+ letter-spacing: 0.5px; transition: all 0.2s;
+ }
+
+ .tab-btn:hover { color: var(--text); background: var(--surface2); }
+
+ .tab-btn.active { background: var(--accent); color: #0a0c0f; }
+
+ .section { display: none; }
+
+ .section.active { display: block; animation: fadeIn 0.3s ease; }
+
+ @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+ .kpi-overview {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+ gap: 16px;
+ margin-bottom: 48px;
+ }
+
+ .kpi-card {
+ background: var(--surface);
+ border: 1px solid var(--border);
+ border-radius: 12px;
+ padding: 24px;
+ cursor: pointer;
+ transition: all 0.25s;
+ position: relative;
+ overflow: hidden;
+ }
+
+ .kpi-card::before {
+ content: '';
+ position: absolute; top: 0; left: 0; right: 0; height: 3px;
+ background: var(--card-accent, var(--accent));
+ transform: scaleX(0); transform-origin: left;
+ transition: transform 0.3s;
+ }
+
+ .kpi-card:hover { 
+ border-color: var(--card-accent, var(--accent)); 
+ transform: translateY(-2px);
+ cursor: help;
+ }
+
+ .kpi-card:hover::before { transform: scaleX(1); }
+
+ .kpi-card.alert { border-color: var(--accent3); }
+
+ .kpi-card.alert::before { transform: scaleX(1); background: var(--accent3); }
+
+ .card-category {
+ font-family: 'DM Mono', monospace; font-size: 10px;
+ color: var(--card-accent, var(--accent)); letter-spacing: 2px;
+ text-transform: uppercase; margin-bottom: 8px;
+ }
+
+ .card-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+
+ .card-metric {
+ font-family: 'Fraunces', serif; font-size: 42px; font-weight: 900;
+ line-height: 1; margin-bottom: 4px; color: var(--card-accent, var(--accent));
+ }
+
+ .card-metric.danger { color: var(--accent3); }
+
+ .card-metric.warn { color: var(--accent4); }
+
+ .card-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted2); margin-bottom: 12px; }
+
+ .card-delta {
+ font-family: 'DM Mono', monospace; font-size: 12px;
+ padding: 3px 8px; border-radius: 4px; display: inline-block;
+ }
+
+ .card-delta.up { background: rgba(200,240,74,0.15); color: var(--accent); }
+
+ .card-delta.down { background: rgba(240,74,122,0.15); color: var(--accent3); }
+
+ .help-icon {
+ display: inline-block;
+ width: 18px;
+ height: 18px;
+ background: rgba(200, 240, 74, 0.2);
+ color: var(--accent);
+ border-radius: 50%;
+ text-align: center;
+ line-height: 18px;
+ font-size: 12px;
+ font-weight: 700;
+ cursor: help;
+ margin-left: 6px;
+ transition: all 0.2s;
+ }
+
+ .kpi-card:hover .help-icon {
+ background: var(--accent);
+ color: #0a0c0f;
+ }
+
+ /* Explanation Modal */
+ .modal {
+ display: none;
+ position: fixed;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background: rgba(0, 0, 0, 0.7);
+ z-index: 1000;
+ align-items: center;
+ justify-content: center;
+ padding: 20px;
+ }
+
+ .modal.active {
+ display: flex;
+ animation: fadeIn 0.3s ease;
+ }
+
+ .modal-content {
+ background: var(--surface);
+ border: 1px solid var(--border);
+ border-radius: 16px;
+ padding: 40px;
+ max-width: 700px;
+ max-height: 80vh;
+ overflow-y: auto;
+ position: relative;
+ }
+
+ .modal-close {
+ position: absolute;
+ top: 20px;
+ right: 20px;
+ background: var(--surface2);
+ border: 1px solid var(--border);
+ border-radius: 6px;
+ width: 32px;
+ height: 32px;
+ cursor: pointer;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 18px;
+ transition: all 0.2s;
+ }
+
+ .modal-close:hover {
+ background: var(--accent3);
+ color: white;
+ }
+
+ .modal-title {
+ font-family: 'Fraunces', serif;
+ font-size: 28px;
+ font-weight: 600;
+ margin-bottom: 12px;
+ }
+
+ .modal-category {
+ font-family: 'DM Mono', monospace;
+ font-size: 11px;
+ color: var(--accent);
+ letter-spacing: 2px;
+ text-transform: uppercase;
+ margin-bottom: 20px;
+ }
+
+ .modal-section {
+ margin-bottom: 24px;
+ }
+
+ .modal-section-title {
+ font-family: 'Fraunces', serif;
+ font-size: 16px;
+ font-weight: 600;
+ margin-bottom: 8px;
+ }
+
+ .modal-section-content {
+ font-size: 13px;
+ line-height: 1.8;
+ color: var(--muted2);
+ }
+
+ .modal-section-content strong {
+ color: var(--text);
+ }
+
+ .metric-example {
+ background: var(--surface2);
+ border-left: 3px solid var(--accent2);
+ border-radius: 6px;
+ padding: 12px;
+ margin: 12px 0;
+ font-family: 'DM Mono', monospace;
+ font-size: 12px;
+ }
+
+ .action-list {
+ background: rgba(200, 240, 74, 0.08);
+ border: 1px solid rgba(200, 240, 74, 0.2);
+ border-radius: 6px;
+ padding: 12px;
+ margin: 12px 0;
+ }
+
+ .action-list li {
+ margin: 6px 0;
+ margin-left: 20px;
+ font-size: 13px;
+ color: var(--muted2);
+ }
+
+ .action-list li strong {
+ color: var(--text);
+ }
+
+ .section-title {
+ font-family: 'Fraunces', serif; 
+ font-size: 28px; 
+ font-weight: 600;
+ margin-bottom: 8px; 
+ letter-spacing: -0.5px;
+ }
+
+ .section-sub { 
+ font-family: 'DM Mono', monospace; 
+ font-size: 12px; 
+ color: var(--muted2); 
+ margin-bottom: 24px; 
+ }
+
+ .detail-grid { 
+ display: grid; 
+ grid-template-columns: 1fr 1fr; 
+ gap: 24px; 
+ margin-bottom: 32px; 
+ }
+
+ @media(max-width: 768px) { 
+ .detail-grid { grid-template-columns: 1fr; } 
+ .stats { grid-template-columns: 1fr; }
+ }
+
+ .detail-panel {
+ background: var(--surface);
+ border: 1px solid var(--border);
+ border-radius: 12px;
+ padding: 28px;
+ }
+
+ .detail-panel-title {
+ font-family: 'Fraunces', serif; 
+ font-size: 20px; 
+ font-weight: 600;
+ margin-bottom: 6px;
+ }
+
+ .metric-row {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 12px 0;
+ border-bottom: 1px solid var(--border);
+ }
+
+ .metric-row:last-child { border-bottom: none; }
+
+ .metric-label { font-size: 13px; color: var(--muted2); }
+
+ .metric-value { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; }
+
+ .trend-up { color: var(--accent); }
+
+ .trend-down { color: var(--accent3); }
+
+ @media(max-width:600px){
+ .container{padding:0 16px;}
+ header{padding:32px 0 24px;}
+ .modal-content { padding: 30px 20px; }
+ }
+</style>
+</head>
+<body>
+
+<div class="container">
+ <header>
+ <div class="header-inner">
+ <div class="header-left">
+ <div class="eyebrow">Intelligence Dashboard with KPI Explanations</div>
+ <h1>Renovation<br><em>KPI</em> 2.0</h1>
+ </div>
+ <div class="header-meta">
+ <span><span class="status-dot"></span>Live with Interactive Guides</span>
+ <span>Hover or click any KPI card for explanation</span>
+ <span>May 17, 2026</span>
+ </div>
+ </div>
+ </header>
+
+ <div class="nav-tabs">
+ <button class="tab-btn active" onclick="showTab('overview')">Overview</button>
+ <button class="tab-btn" onclick="showTab('schedule')">Schedule</button>
+ <button class="tab-btn" onclick="showTab('cost')">Cost</button>
+ <button class="tab-btn" onclick="showTab('quality')">Quality</button>
+ <button class="tab-btn" onclick="showTab('financial')">Financial</button>
+ </div>
+
+ <!-- OVERVIEW TAB -->
+ <div id="overview" class="section active">
+ <div class="section-title">Portfolio Overview</div>
+ <div class="section-sub">// Hover over or click any metric card for interactive explanation</div>
+
+ <div class="kpi-overview">
+ <div class="kpi-card" style="--card-accent:#c8f04a" onclick="showExplanation('cycle-time')">
+ <div class="card-category">Schedule</div>
+ <div class="card-title">
+ Avg Unit Turn Cycle
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric warn">19.3</div>
+ <div class="card-sub">days — target: 16</div>
+ <div class="card-delta down">↑ 3.3 days over target</div>
+ </div>
+
+ <div class="kpi-card alert" style="--card-accent:#f04a7a" onclick="showExplanation('cost-variance')">
+ <div class="card-category">Cost</div>
+ <div class="card-title">
+ Cost per Unit Variance
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric danger">+14%</div>
+ <div class="card-sub">$18,200 actual vs $16,000 budget</div>
+ <div class="card-delta down">↑ Exceeds 8% threshold</div>
+ </div>
+
+ <div class="kpi-card" style="--card-accent:#4af0c8" onclick="showExplanation('first-pass-rate')">
+ <div class="card-category">Quality</div>
+ <div class="card-title">
+ First-Pass Inspection Rate
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric">68%</div>
+ <div class="card-sub">of units — target: 85%</div>
+ <div class="card-delta down">↓ 17 pts below target</div>
+ </div>
+
+ <div class="kpi-card" style="--card-accent:#f0a84a" onclick="showExplanation('vendor-ontime')">
+ <div class="card-category">Vendors</div>
+ <div class="card-title">
+ On-Time Delivery Rate
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric">71%</div>
+ <div class="card-sub">across 12 active vendors</div>
+ <div class="card-delta down">↓ 14 pts below benchmark</div>
+ </div>
+
+ <div class="kpi-card" style="--card-accent:#c8f04a" onclick="showExplanation('revenue-loss')">
+ <div class="card-category">Financial Impact</div>
+ <div class="card-title">
+ Revenue Lost This Month
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric danger">$127K</div>
+ <div class="card-sub">vacancy days × market rent</div>
+ <div class="card-delta down">↑ from $94K last month</div>
+ </div>
+
+ <div class="kpi-card" style="--card-accent:#4af0c8" onclick="showExplanation('best-roi')">
+ <div class="card-category">Financial</div>
+ <div class="card-title">
+ Best-ROI Scope
+ <span class="help-icon">?</span>
+ </div>
+ <div class="card-metric">2.1×</div>
+ <div class="card-sub">Kitchen upgrade — 14 mo payback</div>
+ <div class="card-delta up">↑ Full gut: 31 mo payback</div>
+ </div>
+ </div>
+ </div>
+
+ <!-- SCHEDULE TAB -->
+ <div id="schedule" class="section">
+ <div class="section-title">Schedule Performance</div>
+ <div class="section-sub">// Click any metric for detailed explanation</div>
+
+ <div class="detail-grid">
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('cycle-time')">Unit Turn Cycle Time <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Current Average</div>
+ <div class="metric-value">19.3 days</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Target</div>
+ <div class="metric-value">16 days</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Variance</div>
+ <div class="metric-value trend-down">+3.3 days</div>
+ </div>
+ </div>
+
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('trade-variance')">Trade-Specific Bottlenecks <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Flooring</div>
+ <div class="metric-value trend-down">+2.1 days ⚠</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Paint</div>
+ <div class="metric-value trend-down">+1.8 days ⚠</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Plumbing</div>
+ <div class="metric-value trend-up">+0.3 days</div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- COST TAB -->
+ <div id="cost" class="section">
+ <div class="section-title">Cost Performance</div>
+ <div class="section-sub">// Click any metric for detailed explanation</div>
+
+ <div class="detail-grid">
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('cost-variance')">Cost Variance <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Budget</div>
+ <div class="metric-value">$16,000/unit</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Actual</div>
+ <div class="metric-value">$18,200/unit</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Variance</div>
+ <div class="metric-value trend-down">+14% ($2,200)</div>
+ </div>
+ </div>
+
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('change-orders')">Change Orders <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Rate</div>
+ <div class="metric-value">18.3% of projects</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Average CO Value</div>
+ <div class="metric-value">$2,850</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Total CO Spend</div>
+ <div class="metric-value">$38,164</div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- QUALITY TAB -->
+ <div id="quality" class="section">
+ <div class="section-title">Quality Performance</div>
+ <div class="section-sub">// Click any metric for detailed explanation</div>
+
+ <div class="detail-grid">
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('first-pass-rate')">First-Pass Inspection Rate <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Portfolio Average</div>
+ <div class="metric-value">68%</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Target</div>
+ <div class="metric-value">85%</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Gap</div>
+ <div class="metric-value trend-down">-17 points</div>
+ </div>
+ </div>
+
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('rework-cost')">Re-entry Rate & Cost <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Re-entry Rate</div>
+ <div class="metric-value">32.4%</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Avg Re-entry Cost</div>
+ <div class="metric-value">$517</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Monthly Impact</div>
+ <div class="metric-value trend-down">$3,800</div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- FINANCIAL TAB -->
+ <div id="financial" class="section">
+ <div class="section-title">Financial Impact</div>
+ <div class="section-sub">// Click any metric for detailed explanation</div>
+
+ <div class="detail-grid">
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('revenue-loss')">Monthly Revenue Loss <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Avg Daily Loss</div>
+ <div class="metric-value">$573/day</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Cycle Variance</div>
+ <div class="metric-value">3.3 days</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">This Month</div>
+ <div class="metric-value trend-down">$127,000</div>
+ </div>
+ </div>
+
+ <div class="detail-panel">
+ <div class="detail-panel-title" onclick="showExplanation('best-roi')">Renovation ROI by Scope <span class="help-icon">?</span></div>
+ <div class="metric-row">
+ <div class="metric-label">Kitchen Upgrade</div>
+ <div class="metric-value">42 mo payback</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Full Gut</div>
+ <div class="metric-value">75 mo payback</div>
+ </div>
+ <div class="metric-row">
+ <div class="metric-label">Best Value</div>
+ <div class="metric-value trend-up">Kitchen (2.1× ROI)</div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+</div>
+
+<!-- Modal for explanations -->
+<div class="modal" id="explanationModal" onclick="closeExplanation(event)">
+ <div class="modal-content" onclick="event.stopPropagation()">
+ <div class="modal-close" onclick="closeExplanation()">×</div>
+ <div id="modalBody"></div>
+ </div>
+</div>
+
+<script>
+const explanations = {
+ 'cycle-time': {
+ title: 'Avg Unit Turn Cycle',
+ category: 'Schedule',
+ sections: [
+ {
+ name: 'What It Measures',
+ content: 'The average number of days from when a unit becomes vacant to when it\'s ready to rent. This is the total renovation duration including demo, rough work, finishing, and final inspection.'
+ },
+ {
+ name: 'Why It Matters',
+ content: '<strong>Every day a unit sits vacant costs money in lost rent.</strong> At an average $79/day rent, each extra day beyond the 16-day target costs $79 in direct revenue loss. With 23 active units, a 3.3-day variance = $76,000+ monthly impact.'
+ },
+ {
+ name: 'Current Status',
+ content: 'Current: <strong>19.3 days</strong> | Target: <strong>16 days</strong> | Gap: <strong>+3.3 days</strong><br><br>This variance is primarily due to:<ul class="action-list"><li><strong>Flooring delays</strong> (+2.1 days) — supplier issues</li><li><strong>Paint scheduling</strong> (+1.8 days) — crew capacity</li></ul>'
+ },
+ {
+ name: 'How to Improve',
+ content: '<ul class="action-list"><li><strong>Hire 2nd paint crew:</strong> Overlap trades during flooring install (recover 0.8 days)</li><li><strong>Activate backup flooring vendor:</strong> Floors Direct for supply redundancy</li><li><strong>Permit prep:</strong> Schedule concurrent with demo (recover 1.2 days for E/P units)</li></ul>Potential recovery: <strong>2.7 days = $42K/month revenue</strong>'
+ },
+ {
+ name: 'Industry Benchmark',
+ content: 'Industry average: 18-20 days. Your 19.3-day target of 16 days is aggressive but achievable with 3 main optimizations above.'
+ }
+ ]
+ },
+
+ 'cost-variance': {
+ title: 'Cost per Unit Variance',
+ category: 'Cost',
+ sections: [
+ {
+ name: 'What It Measures',
+ content: 'The percentage difference between your budgeted cost per unit and the actual cost. Positive variance = over budget. Negative = under budget. Current: +14% means you\'re spending $2,200 more than planned per unit.'
+ },
+ {
+ name: 'Why It Matters',
+ content: '<strong>Cost variance compounds across your portfolio.</strong> If you renovate 847 units at +14% variance, that\'s $1.86M in budget overruns. Even 2-3% variance = $170K-$250K impact.'
+ },
+ {
+ name: 'Current Breakdown',
+ content: '<div class="metric-example">Budget: $16,000/unit<br>Actual: $18,200/unit<br>Variance: +$2,200 (+14%)</div><br>Root causes:<ul class="action-list"><li><strong>Untracked scope additions:</strong> $1,740 (verbal upgrades without COs)</li><li><strong>Subfloor surprises:</strong> $560 (discovered during demo)</li><li><strong>Material inflation:</strong> $200 (flooring +24% YoY)</li></ul>'
+ },
+ {
+ name: 'What\'s Healthy',
+ content: 'Threshold: ±5% is "on budget"<br>Current: +14% is <strong>ALERT</strong><br><br>To get back to ±5%: eliminate verbal scope changes and implement mandatory pre-scope inspections.'
+ },
+ {
+ name: 'Next Steps',
+ content: '<ul class="action-list"><li><strong>Subfloor moisture test:</strong> Before any budget approval (eliminates 38% of COs)</li><li><strong>Change order discipline:</strong> No verbal approvals, written COs only</li><li><strong>PM training:</strong> Standardized scoping to reduce unauthorized add-ons</li></ul>Expected improvement: <strong>
