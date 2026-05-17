@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI 2.0 Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+
+ body {
+ background: #0a0c0f;
+ color: #e8eaf0;
+ font-family: 'Syne', sans-serif;
+ min-height: 100vh;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+ padding: 20px;
+ }
+
+ body::before {
+ content: '';
+ position: fixed;
+ inset: 0;
+ background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+ pointer-events: none;
+ z-index: 0;
+ }
+
+ .wrapper {
+ position: relative;
+ z-index: 1;
+ text-align: center;
+ max-width: 500px;
+ }
+
+ .logo {
+ font-size: 80px;
+ margin-bottom: 24px;
+ animation: bounce 2s ease-in-out infinite;
+ }
+
+ @keyframes bounce {
+ 0%, 100% { transform: translateY(0); }
+ 50% { transform: translateY(-10px); }
+ }
+
+ h1 {
+ font-family: 'Fraunces', serif;
+ font-size: 56px;
+ font-weight: 900;
+ line-height: 1.1;
+ margin-bottom: 12px;
+ letter-spacing: -2px;
+ }
+
+ .subtitle {
+ font-size: 16px;
+ color: #8a909f;
+ margin-bottom: 40px;
+ line-height: 1.6;
+ }
+
+ .big-button {
+ background: #c8f04a;
+ color: #0a0c0f;
+ border: none;
+ border-radius: 16px;
+ padding: 24px 60px;
+ font-size: 20px;
+ font-weight: 800;
+ letter-spacing: 1px;
+ text-transform: uppercase;
+ cursor: pointer;
+ font-family: 'Syne', sans-serif;
+ transition: all 0.3s ease;
+ margin-bottom: 40px;
+ box-shadow: 0 10px 40px rgba(200, 240, 74, 0.2);
+ }
+
+ .big-button:hover {
+ transform: translateY(-4px);
+ box-shadow: 0 20px 60px rgba(200, 240, 74, 0.3);
+ }
+
+ .big-button:active {
+ transform: translateY(-2px);
+ }
+
+ .stats {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: 16px;
+ margin-bottom: 40px;
+ }
+
+ .stat {
+ background: #111318;
+ border: 1px solid #1f2530;
+ border-radius: 12px;
+ padding: 20px;
+ }
+
+ .stat-value {
+ font-family: 'Fraunces', serif;
+ font-size: 32px;
+ font-weight: 900;
+ color: #c8f04a;
+ margin-bottom: 4px;
+ }
+
+ .stat-label {
+ font-size: 11px;
+ color: #8a909f;
+ letter-spacing: 1px;
+ text-transform: uppercase;
+ }
+
+ .quick-links {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 12px;
+ margin-bottom: 40px;
+ }
+
+ .link-button {
+ background: #111318;
+ color: #e8eaf0;
+ border: 1px solid #1f2530;
+ border-radius: 8px;
+ padding: 12px;
+ font-size: 12px;
+ cursor: pointer;
+ transition: all 0.2s;
+ font-family: 'Syne', sans-serif;
+ }
+
+ .link-button:hover {
+ border-color: #c8f04a;
+ color: #c8f04a;
+ }
+
+ .footer {
+ font-size: 12px;
+ color: #5a6070;
+ border-top: 1px solid #1f2530;
+ padding-top: 24px;
+ }
+
+ .status-indicator {
+ display: inline-block;
+ width: 8px;
+ height: 8px;
+ background: #c8f04a;
+ border-radius: 50%;
+ margin-right: 6px;
+ animation: pulse 2s infinite;
+ }
+
+ @keyframes pulse {
+ 0%, 100% { opacity: 1; }
+ 50% { opacity: 0.3; }
+ }
+
+ @media (max-width: 600px) {
+ h1 { font-size: 40px; }
+ .big-button { padding: 18px 40px; font-size: 16px; }
+ .stats { grid-template-columns: 1fr; }
+ .quick-links { grid-template-columns: 1fr; }
+ }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+ <div class="logo">📊</div>
+ 
+ <h1>Renovation KPI 2.0</h1>
+ 
+ <div class="subtitle">
+ Complete intelligence dashboard<br>
+ 32 months • 22 projects • 847 units • $4.8M value
+ </div>
+
+ <button class="big-button" onclick="launch()">Launch Dashboard</button>
+
+ <div class="stats">
+ <div class="stat">
+ <div class="stat-value">847</div>
+ <div class="stat-label">Units</div>
+ </div>
+ <div class="stat">
+ <div class="stat-value">$4.8M</div>
+ <div class="stat-label">Value</div>
+ </div>
+ <div class="stat">
+ <div class="stat-value">32mo</div>
+ <div class="stat-label">Data</div>
+ </div>
+ </div>
+
+ <div class="quick-links">
+ <button class="link-button" onclick="location.href='RENOVATION_KPI_2.0.html'">📈 Main Dashboard</button>
+ <button class="link-button" onclick="location.href='START_HERE.md'">📖 Getting Started</button>
+ <button class="link-button" onclick="location.href='README_KPI_2.0_COMPLETE.md'">📋 Full Guide</button>
+ <button class="link-button" onclick="location.href='kpi-launcher.html'">🚀 Full Launcher</button>
+ </div>
+
+ <div class="footer">
+ <span class="status-indicator"></span>Production Ready
+ <br><br>
+ 8 Tabs • 4 Charts • 5 Scenarios • 5 Crews
+ <br><br>
+ Last Updated: May 17, 2026
+ </div>
+</div>
+
+<script>
+function launch() {
+ window.location.href = 'RENOVATION_KPI_2.0.html';
+}
+
+// Allow Enter key to launch
+document.addEventListener('keydown', (e) => {
+ if (e.key === 'Enter') launch();
+});
+</script>
+
+</body>
+</html>
