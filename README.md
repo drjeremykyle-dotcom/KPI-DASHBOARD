@@ -2,11 +2,30 @@
 
 Complete intelligence dashboard with 32 months of data, 22 projects, 847 units, and $4.8M+ value.
 
-## 🚀 Quick Start
+## 🖥️ Desktop Launch (New!)
+
+**Get started in 30 seconds:**
+
+### Windows
+- Right-click `launch-dashboard.bat` → Create shortcut → Move to Desktop → **Done!** 🚀
+
+### macOS  
+- Run: `chmod +x launch-dashboard.sh` → Double-click file → **Done!** 🚀
+
+### Linux
+- Run: `chmod +x launch-dashboard.sh` → Double-click file → **Done!** 🚀
+
+📖 **Detailed Setup?** See [DESKTOP_SETUP.md](DESKTOP_SETUP.md)
+
+---
+
+## 🌐 Quick Start (Web)
 
 **Live Dashboard:** https://drjeremykyle-dotcom.github.io/kpi-dashboard/index.html
 
 No installation required—open and explore immediately.
+
+---
 
 ## 📊 What's Inside
 
@@ -32,12 +51,13 @@ No installation required—open and explore immediately.
 ## 🎯 How to Use
 
 ### For Quick Review
-1. Click the link above
-2. Start with the **Overview** tab for dashboard summary
-3. Use tabs to drill into specific areas
+1. **Desktop:** Double-click launcher shortcut or file
+2. **Web:** Click the link above
+3. Start with the **Overview** tab for dashboard summary
+4. Use tabs to drill into specific areas
 
 ### For Team Presentations
-1. Share the live dashboard link
+1. Share the live dashboard link or desktop launcher
 2. Use the **Scenarios** tab for what-if discussions
 3. Reference the **Vendors** tab for partnership insights
 
@@ -54,6 +74,9 @@ No installation required—open and explore immediately.
 | `RENOVATION_KPI_2.0.html` | Full production dashboard |
 | `RENOVATION_KPI_2.0_WITH_EXPLANATIONS.html` | Educational version with detailed notes |
 | `kpi-launcher.html` | Professional launcher interface |
+| `launch-dashboard.bat` | Windows launcher (right-click → shortcut) |
+| `launch-dashboard.sh` | macOS/Linux launcher |
+| `Launch-Dashboard.ps1` | Advanced Windows PowerShell launcher |
 
 ## 🛠️ Technical Stack
 
@@ -61,7 +84,7 @@ No installation required—open and explore immediately.
 - **Charting:** Chart.js for interactive visualizations
 - **Styling:** Dark theme with responsive Bootstrap grid
 - **Data Format:** JSON embedded in HTML
-- **Hosting:** GitHub Pages (static site)
+- **Hosting:** GitHub Pages (static site) or Local Desktop
 - **Browser Support:** Chrome, Firefox, Safari, Edge (modern versions)
 
 ## 📊 Data Structure
@@ -111,8 +134,8 @@ To update the dashboard with new data:
 1. Export your KPI data in JSON format
 2. Update the data object in the HTML file
 3. Verify chart rendering
-4. Commit and push changes
-5. GitHub Pages updates automatically
+4. Commit and push changes (if using web version)
+5. Changes update automatically
 
 ### Data Format Example
 ```json
@@ -152,10 +175,11 @@ To update the dashboard with new data:
 
 ## 🔐 Security & Privacy
 
-- **No backend server** – All data stays in the browser
+- **No backend server** – All data stays in your computer/browser
 - **Static site hosting** – No user tracking
 - **Local processing** – Charts render client-side
 - **HTTPS delivery** – GitHub Pages provides encryption
+- **Works offline** – No internet needed after initial load
 
 **Note:** Do not include sensitive personal data in the dashboard. Redact or anonymize as needed.
 
@@ -170,6 +194,11 @@ To update the dashboard with new data:
 | Mobile Safari (iOS 14+) | ✅ Fully Supported |
 | Chrome Mobile | ✅ Fully Supported |
 
+## 🖥️ Desktop Launch Guides
+
+- **Quick Setup (30 sec):** [DESKTOP_SETUP.md](DESKTOP_SETUP.md)
+- **Full Installation:** [INSTALL.md](INSTALL.md)
+
 ## 🐛 Troubleshooting
 
 ### Dashboard Not Loading
@@ -183,6 +212,12 @@ To update the dashboard with new data:
 - Check browser console for errors (F12)
 - Verify data format is valid JSON
 - Try opening in incognito mode
+
+### Launcher Scripts Not Working
+- **Windows:** Right-click batch file → "Run as administrator"
+- **macOS/Linux:** Run `chmod +x launch-dashboard.sh` first
+- Check full paths in scripts are correct
+- Verify index.html is in the same folder
 
 ### Performance Issues
 - Close unnecessary browser tabs
@@ -212,6 +247,9 @@ To update the dashboard with new data:
 - ✅ 5 scenario simulations
 - ✅ Dark theme
 - ✅ Full responsive design
+- ✅ Desktop launcher scripts (Windows, macOS, Linux)
+- ✅ Comprehensive documentation
+- ✅ Installation guides for all platforms
 
 ## 📄 License
 
@@ -230,3 +268,7 @@ To contribute improvements:
 ---
 
 ✅ **Production Ready** | Last Updated: May 17, 2026
+
+### 🚀 Get Started Now
+- **Web Version:** [Live Dashboard](https://drjeremykyle-dotcom.github.io/kpi-dashboard/index.html)
+- **Desktop Version:** [Setup Guide](DESKTOP_SETUP.md)
