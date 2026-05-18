@@ -2,231 +2,803 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KPI 2.0 Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>KPI Command — Renovation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;0,900;1,300&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
- * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg:#0a0c0f; --surface:#111318; --surface2:#181c23; --border:#1f2530;
+  --accent:#c8f04a; --accent2:#4af0c8; --accent3:#f04a7a; --accent4:#f0a84a;
+  --text:#e8eaf0; --muted:#5a6070; --muted2:#8a909f;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
 
- body {
- background: #0a0c0f;
- color: #e8eaf0;
- font-family: 'Syne', sans-serif;
- min-height: 100vh;
- display: flex;
- flex-direction: column;
- align-items: center;
- justify-content: center;
- padding: 20px;
- }
+/* LOCK SCREEN */
+#lock-screen{
+  position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;
+}
+.lock-logo{font-family:'Fraunces',serif;font-size:clamp(36px,8vw,56px);font-weight:900;letter-spacing:-2px;text-align:center;}
+.lock-logo em{font-style:italic;color:var(--accent);}
+.lock-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:3px;text-transform:uppercase;}
+.pin-dots{display:flex;gap:14px;margin:4px 0;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:all 0.2s;}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:220px;}
+.pin-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Syne',sans-serif;font-size:22px;font-weight:700;padding:18px;border-radius:10px;cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.pin-btn:hover{background:var(--surface2);border-color:var(--accent);}
+.pin-btn:active{transform:scale(0.93);background:var(--surface2);}
+.pin-clear{font-size:14px;letter-spacing:1px;}
+.pin-error{color:var(--accent3);font-family:'DM Mono',monospace;font-size:12px;min-height:18px;text-align:center;}
 
- body::before {
- content: '';
- position: fixed;
- inset: 0;
- background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
- pointer-events: none;
- z-index: 0;
- }
+/* MAIN APP */
+#app{display:none;}
+.container{max-width:1200px;margin:0 auto;padding:0 16px;}
 
- .wrapper {
- position: relative;
- z-index: 1;
- text-align: center;
- max-width: 500px;
- }
+/* HEADER */
+header{padding:28px 0 20px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+.header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+h1{font-family:'Fraunces',serif;font-size:clamp(26px,4vw,48px);font-weight:900;line-height:0.95;letter-spacing:-2px;}
+h1 em{font-style:italic;color:var(--accent);}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.header-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);}
+.status-dot{display:inline-block;width:7px;height:7px;background:var(--accent);border-radius:50%;margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.lock-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;}
+.lock-btn:hover{border-color:var(--accent3);color:var(--accent3);}
 
- .logo {
- font-size: 80px;
- margin-bottom: 24px;
- animation: bounce 2s ease-in-out infinite;
- }
+/* NAV */
+.nav-wrap{overflow-x:auto;margin-bottom:28px;-webkit-overflow-scrolling:touch;}
+.nav-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);padding:4px;border-radius:8px;width:max-content;min-width:100%;}
+.tab-btn{padding:9px 14px;border:none;background:transparent;color:var(--muted2);cursor:pointer;border-radius:6px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{background:var(--accent);color:#0a0c0f;}
 
- @keyframes bounce {
- 0%, 100% { transform: translateY(0); }
- 50% { transform: translateY(-10px); }
- }
+/* SECTIONS */
+.section{display:none;}
+.section.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
- h1 {
- font-family: 'Fraunces', serif;
- font-size: 56px;
- font-weight: 900;
- line-height: 1.1;
- margin-bottom: 12px;
- letter-spacing: -2px;
- }
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc,var(--accent));}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.kpi-value{font-family:'Fraunces',serif;font-size:34px;font-weight:900;line-height:1;color:var(--cc,var(--accent));}
+.kpi-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:4px;}
 
- .subtitle {
- font-size: 16px;
- color: #8a909f;
- margin-bottom: 40px;
- line-height: 1.6;
- }
+/* SECTION HEADER */
+.sec-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.sec-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;letter-spacing:-0.5px;}
+.sec-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-top:2px;}
 
- .big-button {
- background: #c8f04a;
- color: #0a0c0f;
- border: none;
- border-radius: 16px;
- padding: 24px 60px;
- font-size: 20px;
- font-weight: 800;
- letter-spacing: 1px;
- text-transform: uppercase;
- cursor: pointer;
- font-family: 'Syne', sans-serif;
- transition: all 0.3s ease;
- margin-bottom: 40px;
- box-shadow: 0 10px 40px rgba(200, 240, 74, 0.2);
- }
+/* BUTTONS */
+.btn-add{background:var(--accent);color:#0a0c0f;border:none;padding:10px 20px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.btn-add:hover{opacity:0.85;}
+.btn-add:active{transform:scale(0.97);}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:10px 20px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-secondary:hover{border-color:var(--accent);}
+.btn-danger{background:transparent;color:var(--accent3);border:1px solid rgba(240,74,122,0.3);padding:5px 10px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;}
+.btn-danger:hover{background:rgba(240,74,122,0.1);}
 
- .big-button:hover {
- transform: translateY(-4px);
- box-shadow: 0 20px 60px rgba(200, 240, 74, 0.3);
- }
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:modalIn 0.25s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:none}}
+.modal-title{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-bottom:4px;}
+.modal-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-bottom:20px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;}
 
- .big-button:active {
- transform: translateY(-2px);
- }
+/* FORM */
+.form-group{margin-bottom:14px;}
+.form-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;display:block;}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;transition:border-color 0.2s;-webkit-appearance:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);}
+.form-textarea{resize:vertical;min-height:72px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.form-row{grid-template-columns:1fr;}}
+.form-select option{background:var(--surface2);}
+.toggle-group{display:flex;}
+.toggle-btn{flex:1;padding:10px;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.toggle-btn:first-child{border-radius:8px 0 0 8px;}
+.toggle-btn:last-child{border-radius:0 8px 8px 0;border-left:none;}
+.toggle-btn.t-yes{background:rgba(200,240,74,0.15);color:var(--accent);border-color:var(--accent);}
+.toggle-btn.t-no{background:rgba(240,74,122,0.15);color:var(--accent3);border-color:var(--accent3);}
+.toggle-btn.t-neutral{background:rgba(200,240,74,0.15);color:var(--accent);border-color:var(--accent);}
 
- .stats {
- display: grid;
- grid-template-columns: repeat(3, 1fr);
- gap: 16px;
- margin-bottom: 40px;
- }
+/* TABLE */
+.data-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;overflow-x:auto;}
+.data-table{width:100%;border-collapse:collapse;min-width:500px;}
+.data-table th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+.data-table td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--surface2);}
+.empty-state{text-align:center;padding:40px 20px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);}
+.empty-icon{font-size:28px;margin-bottom:10px;}
 
- .stat {
- background: #111318;
- border: 1px solid #1f2530;
- border-radius: 12px;
- padding: 20px;
- }
+/* BADGES */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;}
+.bg{background:rgba(200,240,74,0.15);color:var(--accent);}
+.br{background:rgba(240,74,122,0.15);color:var(--accent3);}
+.by{background:rgba(240,168,74,0.15);color:var(--accent4);}
+.bb{background:rgba(74,240,200,0.15);color:var(--accent2);}
 
- .stat-value {
- font-family: 'Fraunces', serif;
- font-size: 32px;
- font-weight: 900;
- color: #c8f04a;
- margin-bottom: 4px;
- }
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--accent);color:#0a0c0f;padding:12px 20px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;transform:translateY(80px);opacity:0;transition:all 0.3s;pointer-events:none;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.err{background:var(--accent3);color:#fff;}
 
- .stat-label {
- font-size: 11px;
- color: #8a909f;
- letter-spacing: 1px;
- text-transform: uppercase;
- }
+.loading{text-align:center;padding:32px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);}
 
- .quick-links {
- display: grid;
- grid-template-columns: 1fr 1fr;
- gap: 12px;
- margin-bottom: 40px;
- }
-
- .link-button {
- background: #111318;
- color: #e8eaf0;
- border: 1px solid #1f2530;
- border-radius: 8px;
- padding: 12px;
- font-size: 12px;
- cursor: pointer;
- transition: all 0.2s;
- font-family: 'Syne', sans-serif;
- }
-
- .link-button:hover {
- border-color: #c8f04a;
- color: #c8f04a;
- }
-
- .footer {
- font-size: 12px;
- color: #5a6070;
- border-top: 1px solid #1f2530;
- padding-top: 24px;
- }
-
- .status-indicator {
- display: inline-block;
- width: 8px;
- height: 8px;
- background: #c8f04a;
- border-radius: 50%;
- margin-right: 6px;
- animation: pulse 2s infinite;
- }
-
- @keyframes pulse {
- 0%, 100% { opacity: 1; }
- 50% { opacity: 0.3; }
- }
-
- @media (max-width: 600px) {
- h1 { font-size: 40px; }
- .big-button { padding: 18px 40px; font-size: 16px; }
- .stats { grid-template-columns: 1fr; }
- .quick-links { grid-template-columns: 1fr; }
- }
+@media(max-width:600px){
+  .container{padding:0 12px;}
+  header{padding:18px 0 14px;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .modal{padding:18px;}
+}
 </style>
 </head>
 <body>
 
-<div class="wrapper">
- <div class="logo">📊</div>
- 
- <h1>Renovation KPI 2.0</h1>
- 
- <div class="subtitle">
- Complete intelligence dashboard<br>
- 32 months • 22 projects • 847 units • $4.8M value
- </div>
+<!-- ══ LOCK SCREEN ══ -->
+<div id="lock-screen">
+  <div class="lock-logo">KPI<br><em>Command</em></div>
+  <div class="lock-sub">Enter PIN to access</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn pin-clear" onclick="pinClear()">CLR</button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn pin-clear" onclick="pinBack()">⌫</button>
+  </div>
+</div>
 
- <button class="big-button" onclick="launch()">Launch Dashboard</button>
+<!-- ══ MAIN APP ══ -->
+<div id="app">
+ <div class="container">
+  <header>
+   <div class="header-inner">
+    <div><h1>Renovation<br><em>KPI</em> Command</h1></div>
+    <div class="header-right">
+      <div class="header-meta"><span class="status-dot"></span>Live Data</div>
+      <div class="header-meta" id="last-updated">—</div>
+      <button class="lock-btn" onclick="lockApp()">🔒 Lock</button>
+    </div>
+   </div>
+  </header>
 
- <div class="stats">
- <div class="stat">
- <div class="stat-value">847</div>
- <div class="stat-label">Units</div>
- </div>
- <div class="stat">
- <div class="stat-value">$4.8M</div>
- <div class="stat-label">Value</div>
- </div>
- <div class="stat">
- <div class="stat-value">32mo</div>
- <div class="stat-label">Data</div>
- </div>
- </div>
+  <div class="nav-wrap">
+   <div class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="showTab('units',this)">Units</button>
+    <button class="tab-btn" onclick="showTab('vendors',this)">Vendors</button>
+    <button class="tab-btn" onclick="showTab('costs',this)">Costs</button>
+    <button class="tab-btn" onclick="showTab('inspections',this)">Inspections</button>
+   </div>
+  </div>
 
- <div class="quick-links">
- <button class="link-button" onclick="location.href='RENOVATION_KPI_2.0.html'">📈 Main Dashboard</button>
- <button class="link-button" onclick="location.href='START_HERE.md'">📖 Getting Started</button>
- <button class="link-button" onclick="location.href='README_KPI_2.0_COMPLETE.md'">📋 Full Guide</button>
- <button class="link-button" onclick="location.href='kpi-launcher.html'">🚀 Full Launcher</button>
- </div>
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="section active">
+   <div class="kpi-grid">
+    <div class="kpi-card" style="--cc:var(--accent)"><div class="kpi-label">Active Units</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-sub">in renovation</div></div>
+    <div class="kpi-card" style="--cc:var(--accent4)"><div class="kpi-label">Avg Cycle Days</div><div class="kpi-value" id="kpi-cycle">—</div><div class="kpi-sub">vacant → rent-ready</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Cost Variance</div><div class="kpi-value" id="kpi-variance">—</div><div class="kpi-sub">budget vs actual</div></div>
+    <div class="kpi-card" style="--cc:var(--accent2)"><div class="kpi-label">1st-Pass Rate</div><div class="kpi-value" id="kpi-firstpass">—</div><div class="kpi-sub">inspections</div></div>
+    <div class="kpi-card" style="--cc:var(--accent)"><div class="kpi-label">Vendor On-Time</div><div class="kpi-value" id="kpi-ontime">—</div><div class="kpi-sub">delivery rate</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Revenue Lost</div><div class="kpi-value" id="kpi-revlost">—</div><div class="kpi-sub">vacancy × daily rent</div></div>
+   </div>
+   <div class="sec-header">
+    <div><div class="sec-title">Recent Activity</div><div class="sec-sub">// Latest entries across all categories</div></div>
+    <button class="btn-add" onclick="showTab('units',document.querySelectorAll('.tab-btn')[1]);setTimeout(()=>openModal('unit-modal'),100)">+ Add Unit</button>
+   </div>
+   <div class="data-table-wrap">
+    <table class="data-table">
+     <thead><tr><th>Type</th><th>Description</th><th>Status</th><th>Date</th></tr></thead>
+     <tbody id="activity-feed"><tr><td colspan="4"><div class="loading">Loading...</div></td></tr></tbody>
+    </table>
+   </div>
+  </div>
 
- <div class="footer">
- <span class="status-indicator"></span>Production Ready
- <br><br>
- 8 Tabs • 4 Charts • 5 Scenarios • 5 Crews
- <br><br>
- Last Updated: May 17, 2026
+  <!-- UNITS -->
+  <div id="tab-units" class="section">
+   <div class="sec-header">
+    <div><div class="sec-title">Units</div><div class="sec-sub">// Every unit from vacant to rent-ready</div></div>
+    <button class="btn-add" onclick="openModal('unit-modal')">+ Add Unit</button>
+   </div>
+   <div class="data-table-wrap">
+    <table class="data-table">
+     <thead><tr><th>Property</th><th>Unit</th><th>Status</th><th>Crew</th><th>Vacant</th><th>Target</th><th>Cycle</th><th>$/Day</th><th></th></tr></thead>
+     <tbody id="units-table"><tr><td colspan="9"><div class="loading">Loading...</div></td></tr></tbody>
+    </table>
+   </div>
+  </div>
+
+  <!-- VENDORS -->
+  <div id="tab-vendors" class="section">
+   <div class="sec-header">
+    <div><div class="sec-title">Vendor Deliveries</div><div class="sec-sub">// Promised vs actual — every delivery</div></div>
+    <button class="btn-add" onclick="openModal('vendor-modal')">+ Log Delivery</button>
+   </div>
+   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:20px;">
+    <div class="kpi-card" style="--cc:var(--accent)"><div class="kpi-label">Total</div><div class="kpi-value" id="v-total">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent2)"><div class="kpi-label">On Time</div><div class="kpi-value" id="v-ontime">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Late</div><div class="kpi-value" id="v-late">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent4)"><div class="kpi-label">On-Time Rate</div><div class="kpi-value" id="v-rate">—</div></div>
+   </div>
+   <div class="data-table-wrap">
+    <table class="data-table">
+     <thead><tr><th>Vendor</th><th>Trade</th><th>Promised</th><th>Actual</th><th>Result</th><th>Notes</th><th></th></tr></thead>
+     <tbody id="vendors-table"><tr><td colspan="7"><div class="loading">Loading...</div></td></tr></tbody>
+    </table>
+   </div>
+  </div>
+
+  <!-- COSTS -->
+  <div id="tab-costs" class="section">
+   <div class="sec-header">
+    <div><div class="sec-title">Cost Tracking</div><div class="sec-sub">// Budget vs actual, change orders flagged</div></div>
+    <button class="btn-add" onclick="openModal('cost-modal')">+ Log Cost</button>
+   </div>
+   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:20px;">
+    <div class="kpi-card" style="--cc:var(--accent)"><div class="kpi-label">Total Budget</div><div class="kpi-value" id="c-budget">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent4)"><div class="kpi-label">Total Actual</div><div class="kpi-value" id="c-actual">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Variance</div><div class="kpi-value" id="c-variance">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Change Orders</div><div class="kpi-value" id="c-cos">—</div></div>
+   </div>
+   <div class="data-table-wrap">
+    <table class="data-table">
+     <thead><tr><th>Unit</th><th>Category</th><th>Budgeted</th><th>Actual</th><th>Variance</th><th>CO</th><th>Notes</th><th></th></tr></thead>
+     <tbody id="costs-table"><tr><td colspan="8"><div class="loading">Loading...</div></td></tr></tbody>
+    </table>
+   </div>
+  </div>
+
+  <!-- INSPECTIONS -->
+  <div id="tab-inspections" class="section">
+   <div class="sec-header">
+    <div><div class="sec-title">Inspections</div><div class="sec-sub">// Pass/fail, punch list, re-entries</div></div>
+    <button class="btn-add" onclick="openModal('inspection-modal')">+ Log Inspection</button>
+   </div>
+   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:20px;">
+    <div class="kpi-card" style="--cc:var(--accent)"><div class="kpi-label">Total</div><div class="kpi-value" id="i-total">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent2)"><div class="kpi-label">Passed</div><div class="kpi-value" id="i-passed">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent3)"><div class="kpi-label">Failed</div><div class="kpi-value" id="i-failed">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent4)"><div class="kpi-label">Re-Entries</div><div class="kpi-value" id="i-reentry">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent2)"><div class="kpi-label">1st Pass Rate</div><div class="kpi-value" id="i-rate">—</div></div>
+    <div class="kpi-card" style="--cc:var(--accent4)"><div class="kpi-label">Avg Punch</div><div class="kpi-value" id="i-punch">—</div></div>
+   </div>
+   <div class="data-table-wrap">
+    <table class="data-table">
+     <thead><tr><th>Unit</th><th>Crew</th><th>Result</th><th>Punch Items</th><th>Re-Entry</th><th>Notes</th><th>Date</th><th></th></tr></thead>
+     <tbody id="inspections-table"><tr><td colspan="8"><div class="loading">Loading...</div></td></tr></tbody>
+    </table>
+   </div>
+  </div>
+
+ </div><!-- /container -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- UNIT -->
+<div class="modal-overlay" id="unit-modal">
+ <div class="modal">
+  <div class="modal-title">Add Unit</div>
+  <div class="modal-sub">// Tracks cycle time, vacancy cost, and crew assignment</div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Property</label><input class="form-input" id="u-property" placeholder="Cedar Pointe"></div>
+   <div class="form-group"><label class="form-label">Unit #</label><input class="form-input" id="u-unit" placeholder="4B"></div>
+  </div>
+  <div class="form-group">
+   <label class="form-label">Status</label>
+   <select class="form-select" id="u-status">
+    <option value="vacant">Vacant — Not Started</option>
+    <option value="demo">Demo</option>
+    <option value="rough-in">Rough-In</option>
+    <option value="flooring">Flooring</option>
+    <option value="paint">Paint</option>
+    <option value="finish">Finish / Punch</option>
+    <option value="complete">Complete — Rent Ready</option>
+   </select>
+  </div>
+  <div class="form-group"><label class="form-label">Assigned Crew</label><input class="form-input" id="u-crew" placeholder="Team Reyes"></div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Vacant Date</label><input class="form-input" type="date" id="u-vacant"></div>
+   <div class="form-group"><label class="form-label">Target Days</label><input class="form-input" type="number" id="u-target" placeholder="16"></div>
+  </div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Ready Date (if done)</label><input class="form-input" type="date" id="u-ready"></div>
+   <div class="form-group"><label class="form-label">Daily Market Rent ($)</label><input class="form-input" type="number" id="u-rent" placeholder="79"></div>
+  </div>
+  <div class="modal-footer">
+   <button class="btn-secondary" onclick="closeModal('unit-modal')">Cancel</button>
+   <button class="btn-add" onclick="saveUnit()">Save Unit</button>
+  </div>
+ </div>
+</div>
+
+<!-- VENDOR -->
+<div class="modal-overlay" id="vendor-modal">
+ <div class="modal">
+  <div class="modal-title">Log Delivery</div>
+  <div class="modal-sub">// Builds vendor scorecard over time</div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Vendor Name</label><input class="form-input" id="v-name" placeholder="BuildPro Supply"></div>
+   <div class="form-group">
+    <label class="form-label">Trade / Material</label>
+    <select class="form-select" id="v-trade">
+     <option>Flooring</option><option>Cabinets</option><option>Countertops</option>
+     <option>Appliances</option><option>Paint</option><option>Plumbing</option>
+     <option>Electrical</option><option>Hardware</option><option>General Materials</option><option>Other</option>
+    </select>
+   </div>
+  </div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Promised Date</label><input class="form-input" type="date" id="v-promised"></div>
+   <div class="form-group"><label class="form-label">Actual Delivery</label><input class="form-input" type="date" id="v-actual"></div>
+  </div>
+  <div class="form-group">
+   <label class="form-label">On Time?</label>
+   <div class="toggle-group">
+    <button class="toggle-btn t-yes" id="vot-yes" onclick="setToggle('vot','yes')">✓ On Time</button>
+    <button class="toggle-btn" id="vot-no" onclick="setToggle('vot','no')">✗ Late</button>
+   </div>
+  </div>
+  <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="v-notes" placeholder="Arrived 4 days late, no notice given..."></textarea></div>
+  <div class="modal-footer">
+   <button class="btn-secondary" onclick="closeModal('vendor-modal')">Cancel</button>
+   <button class="btn-add" onclick="saveVendor()">Save Delivery</button>
+  </div>
+ </div>
+</div>
+
+<!-- COST -->
+<div class="modal-overlay" id="cost-modal">
+ <div class="modal">
+  <div class="modal-title">Log Cost</div>
+  <div class="modal-sub">// Budget vs actual — flag unauthorized change orders</div>
+  <div class="form-group"><label class="form-label">Unit (Property + Number)</label><input class="form-input" id="c-unit-ref" placeholder="Cedar Pointe — 4B"></div>
+  <div class="form-group">
+   <label class="form-label">Category</label>
+   <select class="form-select" id="c-category">
+    <option>Cabinets</option><option>Countertops</option><option>Flooring — Material</option>
+    <option>Flooring — Labor</option><option>Paint — Material</option><option>Paint — Labor</option>
+    <option>Appliances</option><option>Plumbing</option><option>Electrical</option>
+    <option>Hardware</option><option>Demo / Hauling</option><option>Subfloor Repair</option><option>Miscellaneous</option>
+   </select>
+  </div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Budgeted ($)</label><input class="form-input" type="number" id="c-budgeted" placeholder="2800"></div>
+   <div class="form-group"><label class="form-label">Actual ($)</label><input class="form-input" type="number" id="c-actual-val" placeholder="3150"></div>
+  </div>
+  <div class="form-group">
+   <label class="form-label">Change Order?</label>
+   <div class="toggle-group">
+    <button class="toggle-btn" id="co-yes" onclick="setToggle('co','yes')">✓ Flag as CO</button>
+    <button class="toggle-btn t-neutral" id="co-no" onclick="setToggle('co','no')">✗ No CO</button>
+   </div>
+  </div>
+  <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="c-notes" placeholder="Subfloor repair found during demo, not in original scope..."></textarea></div>
+  <div class="modal-footer">
+   <button class="btn-secondary" onclick="closeModal('cost-modal')">Cancel</button>
+   <button class="btn-add" onclick="saveCost()">Save Cost</button>
+  </div>
+ </div>
+</div>
+
+<!-- INSPECTION -->
+<div class="modal-overlay" id="inspection-modal">
+ <div class="modal">
+  <div class="modal-title">Log Inspection</div>
+  <div class="modal-sub">// Builds crew quality scorecard over time</div>
+  <div class="form-group"><label class="form-label">Unit (Property + Number)</label><input class="form-input" id="i-unit-ref" placeholder="Cedar Pointe — 4B"></div>
+  <div class="form-group"><label class="form-label">Crew</label><input class="form-input" id="i-crew" placeholder="Team Reyes"></div>
+  <div class="form-group">
+   <label class="form-label">Result</label>
+   <div class="toggle-group">
+    <button class="toggle-btn t-yes" id="ip-pass" onclick="setToggle('ip','yes')">✓ Pass</button>
+    <button class="toggle-btn" id="ip-fail" onclick="setToggle('ip','no')">✗ Fail</button>
+   </div>
+  </div>
+  <div class="form-row">
+   <div class="form-group"><label class="form-label">Punch List Items</label><input class="form-input" type="number" id="i-punch-count" placeholder="0"></div>
+   <div class="form-group">
+    <label class="form-label">Re-Entry Needed?</label>
+    <div class="toggle-group">
+     <button class="toggle-btn" id="ir-yes" onclick="setToggle('ir','yes')">Yes</button>
+     <button class="toggle-btn t-neutral" id="ir-no" onclick="setToggle('ir','no')">No</button>
+    </div>
+   </div>
+  </div>
+  <div class="form-group"><label class="form-label">Inspection Date</label><input class="form-input" type="date" id="i-date"></div>
+  <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="i-notes" placeholder="LVP seam raised in living room, caulking incomplete in bath..."></textarea></div>
+  <div class="modal-footer">
+   <button class="btn-secondary" onclick="closeModal('inspection-modal')">Cancel</button>
+   <button class="btn-add" onclick="saveInspection()">Save Inspection</button>
+  </div>
  </div>
 </div>
 
 <script>
-function launch() {
- window.location.href = 'RENOVATION_KPI_2.0.html';
+// ══════════════════════════════════════
+// ⚙️  CONFIG — Edit these 3 values
+// ══════════════════════════════════════
+const SUPABASE_URL  = 'https://cjtowfwjnlcqrrfrllcb.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE'; // paste your anon/publishable key
+const PIN = '1234'; // change to your preferred 4-digit PIN
+
+// ══════════════════════════════════════
+// INIT SUPABASE
+// ══════════════════════════════════════
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Set today on all date inputs
+document.querySelectorAll('input[type="date"]').forEach(el => {
+  el.value = new Date().toISOString().split('T')[0];
+});
+
+// ══════════════════════════════════════
+// PIN
+// ══════════════════════════════════════
+let pinEntry = '';
+function pinPress(d) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += d; updateDots();
+  if (pinEntry.length === 4) checkPin();
+}
+function pinBack() { pinEntry = pinEntry.slice(0,-1); updateDots(); }
+function pinClear() { pinEntry = ''; updateDots(); document.getElementById('pin-error').textContent = ''; }
+function updateDots() {
+  for (let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled', i < pinEntry.length);
+}
+function checkPin() {
+  if (pinEntry === PIN) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadAll();
+  } else {
+    document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+    pinEntry = '';
+    setTimeout(() => { updateDots(); document.getElementById('pin-error').textContent = ''; }, 900);
+  }
+}
+function lockApp() {
+  pinEntry = ''; updateDots();
+  document.getElementById('lock-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
 }
 
-// Allow Enter key to launch
-document.addEventListener('keydown', (e) => {
- if (e.key === 'Enter') launch();
-});
-</script>
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function showTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
 
+// ══════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════
+// TOGGLES
+// ══════════════════════════════════════
+const TS = { vot:'yes', co:'no', ip:'yes', ir:'no' };
+const TID = {
+  vot: ['vot-yes','vot-no'],
+  co:  ['co-yes','co-no'],
+  ip:  ['ip-pass','ip-fail'],
+  ir:  ['ir-yes','ir-no']
+};
+function setToggle(g, v) {
+  TS[g] = v;
+  const [yEl, nEl] = TID[g].map(id => document.getElementById(id));
+  yEl.className = 'toggle-btn' + (v==='yes' ? ' t-yes' : '');
+  nEl.className = 'toggle-btn' + (v==='no'  ? (g==='co'||g==='ir' ? ' t-neutral' : ' t-no') : '');
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isErr ? ' err' : '');
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function fmt$(n) {
+  if (!n && n!==0) return '—';
+  return Math.abs(n) >= 1000 ? '$'+(Math.abs(n)/1000).toFixed(0)+'K' : '$'+Math.abs(n).toLocaleString();
+}
+function days(a,b) {
+  if (!a||!b) return null;
+  return Math.round((new Date(b)-new Date(a))/86400000);
+}
+function fd(d) {
+  if (!d) return '—';
+  return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function sbadge(s) {
+  const m = {vacant:'br',demo:'by','rough-in':'by',flooring:'bb',paint:'bb',finish:'by',complete:'bg'};
+  return `<span class="badge ${m[s]||'bb'}">${s}</span>`;
+}
+
+// ══════════════════════════════════════
+// LOAD ALL
+// ══════════════════════════════════════
+let uData=[], vData=[], cData=[], iData=[];
+
+async function loadAll() {
+  document.getElementById('last-updated').textContent = 'Updated '+new Date().toLocaleTimeString();
+  await Promise.all([loadUnits(), loadVendors(), loadCosts(), loadInspections()]);
+  calcOverview();
+}
+
+// ── UNITS ──
+async function loadUnits() {
+  const {data,error} = await db.from('units').select('*').order('created_at',{ascending:false});
+  if (error) { toast('Units load error',true); return; }
+  uData = data||[];
+  const tbody = document.getElementById('units-table');
+  if (!uData.length) { tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🏗️</div>No units yet — tap "+ Add Unit"</div></td></tr>`; return; }
+  tbody.innerHTML = uData.map(u => {
+    const today = new Date().toISOString().split('T')[0];
+    const cyc = u.ready_date ? days(u.vacant_date,u.ready_date) : (u.vacant_date ? days(u.vacant_date,today) : null);
+    const over = cyc !== null && u.target_days && cyc > u.target_days;
+    return `<tr>
+      <td><strong>${u.property||'—'}</strong></td>
+      <td>${u.unit_number||'—'}</td>
+      <td>${sbadge(u.status)}</td>
+      <td>${u.crew||'—'}</td>
+      <td>${fd(u.vacant_date)}</td>
+      <td>${u.target_days?u.target_days+'d':'—'}</td>
+      <td style="color:${over?'var(--accent3)':'var(--accent)'};font-family:'DM Mono',monospace">${cyc!==null?cyc+'d':'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${u.daily_rent?'$'+u.daily_rent:'—'}</td>
+      <td><button class="btn-danger" onclick="del('units','${u.id}',loadUnits)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveUnit() {
+  const prop = document.getElementById('u-property').value.trim();
+  const unit = document.getElementById('u-unit').value.trim();
+  if (!prop||!unit) { toast('Property and unit # required',true); return; }
+  const {error} = await db.from('units').insert([{
+    property:prop, unit_number:unit,
+    status:document.getElementById('u-status').value,
+    crew:document.getElementById('u-crew').value.trim(),
+    vacant_date:document.getElementById('u-vacant').value||null,
+    ready_date:document.getElementById('u-ready').value||null,
+    target_days:parseInt(document.getElementById('u-target').value)||16,
+    daily_rent:parseFloat(document.getElementById('u-rent').value)||null
+  }]);
+  if (error) { toast('Save failed: '+error.message,true); return; }
+  toast('Unit saved ✓');
+  closeModal('unit-modal');
+  ['u-property','u-unit','u-crew','u-rent','u-ready'].forEach(id=>document.getElementById(id).value='');
+  loadAll();
+}
+
+// ── VENDORS ──
+async function loadVendors() {
+  const {data,error} = await db.from('vendors').select('*').order('created_at',{ascending:false});
+  if (error) { toast('Vendors load error',true); return; }
+  vData = data||[];
+  const tot=vData.length, on=vData.filter(v=>v.on_time).length, late=tot-on;
+  document.getElementById('v-total').textContent=tot||'—';
+  document.getElementById('v-ontime').textContent=on||'—';
+  document.getElementById('v-late').textContent=late||'—';
+  document.getElementById('v-rate').textContent=tot?Math.round((on/tot)*100)+'%':'—';
+  const tbody=document.getElementById('vendors-table');
+  if (!vData.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🚚</div>No deliveries logged yet</div></td></tr>`; return; }
+  tbody.innerHTML = vData.map(v => {
+    const d = v.promised_date&&v.actual_date?days(v.promised_date,v.actual_date):null;
+    const late = d!==null&&d>0?` <span style="color:var(--accent3);font-size:11px">(+${d}d)</span>`:'';
+    return `<tr>
+      <td><strong>${v.name||'—'}</strong></td>
+      <td>${v.trade||'—'}</td>
+      <td>${fd(v.promised_date)}</td>
+      <td>${fd(v.actual_date)}${late}</td>
+      <td>${v.on_time?'<span class="badge bg">On Time</span>':'<span class="badge br">Late</span>'}</td>
+      <td style="max-width:150px;font-size:12px;color:var(--muted2)">${v.notes||'—'}</td>
+      <td><button class="btn-danger" onclick="del('vendors','${v.id}',loadVendors)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveVendor() {
+  const name=document.getElementById('v-name').value.trim();
+  if (!name) { toast('Vendor name required',true); return; }
+  const {error} = await db.from('vendors').insert([{
+    name, trade:document.getElementById('v-trade').value,
+    promised_date:document.getElementById('v-promised').value||null,
+    actual_date:document.getElementById('v-actual').value||null,
+    on_time:TS.vot==='yes',
+    notes:document.getElementById('v-notes').value.trim()
+  }]);
+  if (error) { toast('Save failed: '+error.message,true); return; }
+  toast('Delivery logged ✓');
+  closeModal('vendor-modal');
+  document.getElementById('v-name').value='';
+  document.getElementById('v-notes').value='';
+  setToggle('vot','yes');
+  loadAll();
+}
+
+// ── COSTS ──
+async function loadCosts() {
+  const {data,error} = await db.from('costs').select('*').order('created_at',{ascending:false});
+  if (error) { toast('Costs load error',true); return; }
+  cData = data||[];
+  const tb=cData.reduce((s,c)=>s+(c.budgeted||0),0);
+  const ta=cData.reduce((s,c)=>s+(c.actual||0),0);
+  const v=ta-tb, cos=cData.filter(c=>c.is_change_order).length;
+  document.getElementById('c-budget').textContent=cData.length?fmt$(tb):'—';
+  document.getElementById('c-actual').textContent=cData.length?fmt$(ta):'—';
+  const vel=document.getElementById('c-variance');
+  vel.textContent=cData.length?(v>=0?'+':'')+fmt$(v):'—';
+  vel.style.color=v>0?'var(--accent3)':'var(--accent)';
+  document.getElementById('c-cos').textContent=cos||'—';
+  const tbody=document.getElementById('costs-table');
+  if (!cData.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">💰</div>No costs logged yet</div></td></tr>`; return; }
+  tbody.innerHTML = cData.map(c => {
+    const vv=(c.actual||0)-(c.budgeted||0);
+    return `<tr>
+      <td><strong>${c.unit_ref||'—'}</strong></td>
+      <td>${c.category||'—'}</td>
+      <td style="font-family:'DM Mono',monospace">$${(c.budgeted||0).toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace">$${(c.actual||0).toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;color:${vv>0?'var(--accent3)':vv<0?'var(--accent)':'var(--muted2)'}">${vv===0?'—':(vv>0?'+':'-')+'$'+Math.abs(vv).toLocaleString()}</td>
+      <td>${c.is_change_order?'<span class="badge br">CO</span>':'—'}</td>
+      <td style="max-width:130px;font-size:12px;color:var(--muted2)">${c.notes||'—'}</td>
+      <td><button class="btn-danger" onclick="del('costs','${c.id}',loadCosts)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveCost() {
+  const ref=document.getElementById('c-unit-ref').value.trim();
+  if (!ref) { toast('Unit reference required',true); return; }
+  const {error} = await db.from('costs').insert([{
+    unit_ref:ref, category:document.getElementById('c-category').value,
+    budgeted:parseFloat(document.getElementById('c-budgeted').value)||0,
+    actual:parseFloat(document.getElementById('c-actual-val').value)||0,
+    is_change_order:TS.co==='yes',
+    notes:document.getElementById('c-notes').value.trim()
+  }]);
+  if (error) { toast('Save failed: '+error.message,true); return; }
+  toast('Cost saved ✓');
+  closeModal('cost-modal');
+  ['c-unit-ref','c-budgeted','c-actual-val','c-notes'].forEach(id=>document.getElementById(id).value='');
+  setToggle('co','no');
+  loadAll();
+}
+
+// ── INSPECTIONS ──
+async function loadInspections() {
+  const {data,error} = await db.from('inspections').select('*').order('created_at',{ascending:false});
+  if (error) { toast('Inspections load error',true); return; }
+  iData = data||[];
+  const tot=iData.length, pass=iData.filter(i=>i.passed).length;
+  const re=iData.filter(i=>i.re_entry).length;
+  const ap=tot?(iData.reduce((s,i)=>s+(i.punch_count||0),0)/tot).toFixed(1):0;
+  document.getElementById('i-total').textContent=tot||'—';
+  document.getElementById('i-passed').textContent=pass||'—';
+  document.getElementById('i-failed').textContent=(tot-pass)||'—';
+  document.getElementById('i-reentry').textContent=re||'—';
+  document.getElementById('i-rate').textContent=tot?Math.round((pass/tot)*100)+'%':'—';
+  document.getElementById('i-punch').textContent=tot?ap:'—';
+  const tbody=document.getElementById('inspections-table');
+  if (!iData.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✅</div>No inspections logged yet</div></td></tr>`; return; }
+  tbody.innerHTML = iData.map(i => `<tr>
+    <td><strong>${i.unit_ref||'—'}</strong></td>
+    <td>${i.crew||'—'}</td>
+    <td>${i.passed?'<span class="badge bg">Pass</span>':'<span class="badge br">Fail</span>'}</td>
+    <td style="font-family:'DM Mono',monospace">${i.punch_count||0}</td>
+    <td>${i.re_entry?'<span class="badge by">Yes</span>':'—'}</td>
+    <td style="max-width:130px;font-size:12px;color:var(--muted2)">${i.notes||'—'}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${fd(i.inspected_at)}</td>
+    <td><button class="btn-danger" onclick="del('inspections','${i.id}',loadInspections)">✕</button></td>
+  </tr>`).join('');
+}
+
+async function saveInspection() {
+  const ref=document.getElementById('i-unit-ref').value.trim();
+  if (!ref) { toast('Unit reference required',true); return; }
+  const {error} = await db.from('inspections').insert([{
+    unit_ref:ref, crew:document.getElementById('i-crew').value.trim(),
+    passed:TS.ip==='yes',
+    punch_count:parseInt(document.getElementById('i-punch-count').value)||0,
+    re_entry:TS.ir==='yes',
+    inspected_at:document.getElementById('i-date').value||new Date().toISOString().split('T')[0],
+    notes:document.getElementById('i-notes').value.trim()
+  }]);
+  if (error) { toast('Save failed: '+error.message,true); return; }
+  toast('Inspection saved ✓');
+  closeModal('inspection-modal');
+  ['i-unit-ref','i-crew','i-punch-count','i-notes'].forEach(id=>document.getElementById(id).value='');
+  setToggle('ip','yes'); setToggle('ir','no');
+  loadAll();
+}
+
+// ── OVERVIEW KPIs ──
+function calcOverview() {
+  // Active units
+  document.getElementById('kpi-active').textContent = uData.filter(u=>u.status!=='complete').length||'0';
+  // Avg cycle (completed)
+  const done=uData.filter(u=>u.ready_date&&u.vacant_date);
+  const avgC=done.length?(done.reduce((s,u)=>s+days(u.vacant_date,u.ready_date),0)/done.length).toFixed(1):null;
+  document.getElementById('kpi-cycle').textContent=avgC?avgC+'d':'—';
+  // Cost variance %
+  const tb=cData.reduce((s,c)=>s+(c.budgeted||0),0);
+  const ta=cData.reduce((s,c)=>s+(c.actual||0),0);
+  const vp=tb?Math.round(((ta-tb)/tb)*100):null;
+  const vel=document.getElementById('kpi-variance');
+  vel.textContent=vp!==null?(vp>=0?'+':'')+vp+'%':'—';
+  vel.style.color=vp>0?'var(--accent3)':'var(--accent)';
+  // First pass
+  const it=iData.length, ip=iData.filter(i=>i.passed).length;
+  document.getElementById('kpi-firstpass').textContent=it?Math.round((ip/it)*100)+'%':'—';
+  // Vendor on-time
+  const vt=vData.length, vo=vData.filter(v=>v.on_time).length;
+  document.getElementById('kpi-ontime').textContent=vt?Math.round((vo/vt)*100)+'%':'—';
+  // Revenue lost
+  const today=new Date().toISOString().split('T')[0];
+  const lost=uData.filter(u=>u.status!=='complete'&&u.vacant_date&&u.daily_rent)
+    .reduce((s,u)=>{const d=days(u.vacant_date,today);return s+(d>0?d*u.daily_rent:0);},0);
+  document.getElementById('kpi-revlost').textContent=lost>0?fmt$(Math.round(lost)):'$0';
+  // Activity feed
+  const acts=[];
+  uData.slice(0,4).forEach(u=>acts.push({type:'Unit',desc:`${u.property} — ${u.unit_number}`,status:sbadge(u.status),date:fd(u.created_at)}));
+  vData.slice(0,3).forEach(v=>acts.push({type:'Delivery',desc:`${v.name} — ${v.trade}`,status:v.on_time?'<span class="badge bg">On Time</span>':'<span class="badge br">Late</span>',date:fd(v.created_at)}));
+  cData.slice(0,3).forEach(c=>acts.push({type:'Cost',desc:`${c.unit_ref} — ${c.category}`,status:c.is_change_order?'<span class="badge br">CO</span>':'<span class="badge bb">Logged</span>',date:fd(c.created_at)}));
+  iData.slice(0,3).forEach(i=>acts.push({type:'Inspection',desc:`${i.unit_ref} — ${i.crew}`,status:i.passed?'<span class="badge bg">Pass</span>':'<span class="badge br">Fail</span>',date:fd(i.inspected_at)}));
+  const feed=document.getElementById('activity-feed');
+  feed.innerHTML=acts.length
+    ? acts.map(a=>`<tr><td><span class="badge bb">${a.type}</span></td><td>${a.desc}</td><td>${a.status}</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">${a.date}</td></tr>`).join('')
+    : `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📋</div>No data yet — start by adding a unit</div></td></tr>`;
+}
+
+// ── DELETE ──
+async function del(table, id, reloadFn) {
+  if (!confirm('Delete this entry?')) return;
+  const {error} = await db.from(table).delete().eq('id',id);
+  if (error) { toast('Delete failed',true); return; }
+  toast('Deleted ✓');
+  await reloadFn();
+  calcOverview();
+}
+</script>
 </body>
 </html>
