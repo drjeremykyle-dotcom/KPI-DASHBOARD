@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Data Seeder</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { background:#0a0c0f; color:#e8eaf0; font-family:monospace; padding:32px; max-width:800px; margin:0 auto; }
+  h1 { color:#c8f04a; margin-bottom:8px; font-size:24px; }
+  .sub { color:#8a909f; font-size:12px; margin-bottom:32px; }
+  .log { background:#111318; border:1px solid #1f2530; border-radius:8px; padding:20px; height:400px; overflow-y:auto; font-size:12px; line-height:1.8; margin-bottom:20px; }
+  .log .ok { color:#c8f04a; }
+  .log .err { color:#f04a7a; }
+  .log .info { color:#4af0c8; }
+  .log .warn { color:#f0a84a; }
+  button { background:#c8f04a; color:#0a0c0f; border:none; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; margin-right:12px; }
+  button:hover { opacity:0.85; }
+  button:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-danger { background:#f04a7a; color:#fff; }
+  .progress { margin-bottom:16px; }
+  .bar { background:#1f2530; border-radius:4px; height:8px; margin-top:6px; overflow:hidden; }
+  .bar-fill { height:100%; background:#c8f04a; border-radius:4px; transition:width 0.3s; width:0%; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .stat { background:#111318; border:1px solid #1f2530; border-radius:8px; padding:14px; text-align:center; }
+  .stat-val { font-size:28px; font-weight:700; color:#c8f04a; }
+  .stat-label { font-size:10px; color:#8a909f; letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+</style>
+</head>
+<body>
+<h1>🏗️ KPI Dashboard — Data Seeder</h1>
+<div class="sub">Generates 30 months of realistic renovation data across 22 projects</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="s-units">0</div><div class="stat-label">Units</div></div>
+  <div class="stat"><div class="stat-val" id="s-vendors">0</div><div class="stat-label">Deliveries</div></div>
+  <div class="stat"><div class="stat-val" id="s-costs">0</div><div class="stat-label">Cost Lines</div></div>
+  <div class="stat"><div class="stat-val" id="s-inspections">0</div><div class="stat-label">Inspections</div></div>
+</div>
+
+<div class="progress">
+  <div style="font-size:12px;color:#8a909f" id="progress-label">Ready to seed</div>
+  <div class="bar"><div class="bar-fill" id="bar"></div></div>
+</div>
+
+<div class="log" id="log"></div>
+
+<button onclick="seedAll()" id="seed-btn">🚀 Seed All Data</button>
+<button class="btn-danger" onclick="clearAll()" id="clear-btn">🗑️ Clear All Data</button>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG — paste your anon key here
+// ══════════════════════════════════════
+const SUPABASE_URL = 'https://cjtowfwjnlcqrrfrllcb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_T4rWG7TVC4ro9uStWUl2WA_2PWCRdiP';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ══════════════════════════════════════
+// LOGGING
+// ══════════════════════════════════════
+function log(msg, type='ok') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${type}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function setProgress(pct, label) {
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+function updateStat(id, val) { document.getElementById(id).textContent = val; }
+
+// ══════════════════════════════════════
+// DATA DEFINITIONS
+// ══════════════════════════════════════
+const PROPERTIES = [
+  { name:'Cedar Pointe', units:48, dailyRent:79 },
+  { name:'Maple Ridge', units:62, dailyRent:94 },
+  { name:'Oakwood Terrace', units:34, dailyRent:71 },
+  { name:'Birchwood Commons', units:55, dailyRent:88 },
+  { name:'Sunset Park', units:29, dailyRent:103 },
+  { name:'Harbor View', units:41, dailyRent:118 },
+  { name:'Elmwood Heights', units:38, dailyRent:82 },
+  { name:'Riverside Flats', units:67, dailyRent:76 },
+];
+
+const CREWS = [
+  'Team Reyes', 'Team Nguyen', 'Team Patel', 'Team Rivera',
+  'Team Martinez', 'Apex Renovations', 'ProBuild Crew', 'Team Williams'
+];
+
+const VENDORS = [
+  { name:'BuildPro Supply', trade:'Flooring', reliability:0.62 },
+  { name:'Floors Direct', trade:'Flooring', reliability:0.91 },
+  { name:'ProPaint Co', trade:'Paint', reliability:0.84 },
+  { name:'Cabinet King', trade:'Cabinets', reliability:0.88 },
+  { name:'ApplianceHub', trade:'Appliances', reliability:0.79 },
+  { name:'CounterPro', trade:'Countertops', reliability:0.93 },
+  { name:'PlumbRight', trade:'Plumbing', reliability:0.87 },
+  { name:'ElectroPro', trade:'Electrical', reliability:0.95 },
+  { name:'HardwareHub', trade:'Hardware', reliability:0.72 },
+  { name:'DemoKing', trade:'Demo / Hauling', reliability:0.81 },
+];
+
+const COST_CATEGORIES = [
+  { name:'Cabinets', pct:0.18 },
+  { name:'Countertops', pct:0.09 },
+  { name:'Flooring — Material', pct:0.14 },
+  { name:'Flooring — Labor', pct:0.08 },
+  { name:'Paint — Material', pct:0.05 },
+  { name:'Paint — Labor', pct:0.07 },
+  { name:'Appliances', pct:0.16 },
+  { name:'Plumbing', pct:0.08 },
+  { name:'Electrical', pct:0.07 },
+  { name:'Demo / Hauling', pct:0.04 },
+  { name:'Hardware', pct:0.03 },
+  { name:'Miscellaneous', pct:0.01 },
+];
+
+const STATUSES = ['complete','complete','complete','complete','complete','complete','complete','finish','paint','flooring','rough-in','demo'];
+const PUNCH_ITEMS = [0,0,1,1,2,2,2,3,3,4,5,6,7,8];
+
+// ══════════════════════════════════════
+// 22 RENOVATION PROJECTS
+// ══════════════════════════════════════
+const PROJECTS = [
+  { property:'Cedar Pointe',      budget:42000,  unitRange:[1,8],   crew:'Team Reyes',       startMonth:-29 },
+  { property:'Maple Ridge',       budget:187000, unitRange:[1,18],  crew:'Team Nguyen',      startMonth:-27 },
+  { property:'Oakwood Terrace',   budget:95000,  unitRange:[1,10],  crew:'Team Patel',       startMonth:-25 },
+  { property:'Birchwood Commons', budget:312000, unitRange:[1,24],  crew:'Team Rivera',      startMonth:-23 },
+  { property:'Cedar Pointe',      budget:67000,  unitRange:[9,16],  crew:'Team Reyes',       startMonth:-21 },
+  { property:'Sunset Park',       budget:450000, unitRange:[1,29],  crew:'Apex Renovations', startMonth:-20 },
+  { property:'Harbor View',       budget:225000, unitRange:[1,16],  crew:'Team Martinez',    startMonth:-18 },
+  { property:'Maple Ridge',       budget:143000, unitRange:[19,32], crew:'Team Williams',    startMonth:-17 },
+  { property:'Elmwood Heights',   budget:89000,  unitRange:[1,9],   crew:'Team Reyes',       startMonth:-15 },
+  { property:'Riverside Flats',   budget:178000, unitRange:[1,20],  crew:'Team Nguyen',      startMonth:-14 },
+  { property:'Oakwood Terrace',   budget:118000, unitRange:[11,22], crew:'ProBuild Crew',    startMonth:-12 },
+  { property:'Birchwood Commons', budget:267000, unitRange:[25,44], crew:'Team Rivera',      startMonth:-11 },
+  { property:'Cedar Pointe',      budget:39000,  unitRange:[17,22], crew:'Team Patel',       startMonth:-10 },
+  { property:'Harbor View',       budget:334000, unitRange:[17,36], crew:'Team Martinez',    startMonth:-9  },
+  { property:'Sunset Park',       budget:156000, unitRange:[1,14],  crew:'Team Williams',    startMonth:-8  },
+  { property:'Elmwood Heights',   budget:203000, unitRange:[10,28], crew:'Team Reyes',       startMonth:-7  },
+  { property:'Maple Ridge',       budget:98000,  unitRange:[33,42], crew:'Team Nguyen',      startMonth:-6  },
+  { property:'Riverside Flats',   budget:421000, unitRange:[21,48], crew:'ProBuild Crew',    startMonth:-5  },
+  { property:'Cedar Pointe',      budget:74000,  unitRange:[23,30], crew:'Team Reyes',       startMonth:-4  },
+  { property:'Birchwood Commons', budget:289000, unitRange:[45,55], crew:'Apex Renovations', startMonth:-3  },
+  { property:'Harbor View',       budget:167000, unitRange:[1,14],  crew:'Team Martinez',    startMonth:-2  },
+  { property:'Maple Ridge',       budget:385000, unitRange:[43,62], crew:'Team Rivera',      startMonth:-1  },
+];
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function rndFloat(min, max) { return Math.random() * (max - min) + min; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+function addMonths(n) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().split('T')[0];
+}
+function crewQuality(crew) {
+  const q = { 'Team Reyes':0.93, 'Team Nguyen':0.85, 'Team Patel':0.72,
+    'Team Rivera':0.88, 'Team Martinez':0.86, 'Apex Renovations':0.44,
+    'ProBuild Crew':0.79, 'Team Williams':0.81 };
+  return q[crew] || 0.80;
+}
+
+// ══════════════════════════════════════
+// SEED ALL
+// ══════════════════════════════════════
+async function seedAll() {
+  document.getElementById('seed-btn').disabled = true;
+  document.getElementById('clear-btn').disabled = true;
+  document.getElementById('log').innerHTML = '';
+
+  let totalUnits=0, totalVendors=0, totalCosts=0, totalInspections=0;
+  const totalSteps = PROJECTS.length;
+
+  log('🚀 Starting data seed — 22 projects, 30 months of history', 'info');
+  log('━'.repeat(60), 'info');
+
+  for (let pi = 0; pi < PROJECTS.length; pi++) {
+    const proj = PROJECTS[pi];
+    const pct = Math.round((pi / totalSteps) * 100);
+    setProgress(pct, `Seeding project ${pi+1} of ${PROJECTS.length}: ${proj.property}`);
+    log(`\n📋 PROJECT ${pi+1}/22 — ${proj.property} | Budget: $${proj.budget.toLocaleString()}`, 'info');
+
+    const unitCount = proj.unitRange[1] - proj.unitRange[0] + 1;
+    const perUnitBudget = Math.round(proj.budget / unitCount);
+    const projStartDate = addMonths(proj.startMonth);
+    const isOld = proj.startMonth < -6;
+    const isRecent = proj.startMonth >= -3;
+
+    // ── Generate Units ──
+    const unitRows = [];
+    for (let u = proj.unitRange[0]; u <= proj.unitRange[1]; u++) {
+      const unitStart = addDays(projStartDate, rnd(0, 14));
+      const targetDays = rnd(14, 20);
+      const actualDays = targetDays + rnd(-3, 8);
+
+      let status, readyDate;
+      if (isOld) {
+        status = 'complete';
+        readyDate = addDays(unitStart, actualDays);
+      } else if (isRecent) {
+        status = pick(STATUSES);
+        readyDate = status === 'complete' ? addDays(unitStart, actualDays) : null;
+      } else {
+        const r = Math.random();
+        status = r < 0.7 ? 'complete' : pick(['finish','paint','flooring']);
+        readyDate = status === 'complete' ? addDays(unitStart, actualDays) : null;
+      }
+
+      const prop = PROPERTIES.find(p => p.name === proj.property);
+      unitRows.push({
+        property: proj.property,
+        unit_number: `${u}${pick(['A','B','C','D'])}`,
+        status,
+        crew: proj.crew,
+        vacant_date: unitStart,
+        ready_date: readyDate,
+        target_days: targetDays,
+        daily_rent: prop ? prop.dailyRent : 80
+      });
+    }
+
+    const { error: ue } = await db.from('units').insert(unitRows);
+    if (ue) { log(`  ✗ Units error: ${ue.message}`, 'err'); continue; }
+    totalUnits += unitRows.length;
+    updateStat('s-units', totalUnits);
+    log(`  ✓ ${unitRows.length} units inserted (${unitRows.filter(u=>u.status==='complete').length} complete)`, 'ok');
+
+    // ── Generate Cost Lines ──
+    const costRows = [];
+    for (let u = proj.unitRange[0]; u <= proj.unitRange[1]; u++) {
+      const unitRef = `${proj.property} — ${u}`;
+      for (const cat of COST_CATEGORIES) {
+        const budgeted = Math.round(perUnitBudget * cat.pct * rndFloat(0.9, 1.1));
+        const isOverrun = Math.random() < 0.28;
+        const isSaving  = Math.random() < 0.12;
+        const isCO      = Math.random() < 0.18;
+        let actual = budgeted;
+        if (isOverrun) actual = Math.round(budgeted * rndFloat(1.05, 1.35));
+        else if (isSaving) actual = Math.round(budgeted * rndFloat(0.75, 0.97));
+
+        costRows.push({
+          unit_ref: unitRef,
+          category: cat.name,
+          budgeted,
+          actual,
+          is_change_order: isCO && isOverrun,
+          notes: isCO && isOverrun ? pick([
+            'Scope added by owner during walkthrough',
+            'Subfloor moisture damage found during demo',
+            'Material substitution required — original backordered',
+            'Granite upcharge approved verbally by PM',
+            'Door hardware upgraded — no written CO',
+            'Additional electrical outlet requested by resident',
+            'Mold remediation required behind cabinets',
+          ]) : ''
+        });
+      }
+    }
+
+    // Insert costs in batches of 100
+    for (let i = 0; i < costRows.length; i += 100) {
+      const batch = costRows.slice(i, i + 100);
+      const { error: ce } = await db.from('costs').insert(batch);
+      if (ce) { log(`  ✗ Costs error: ${ce.message}`, 'err'); }
+    }
+    totalCosts += costRows.length;
+    updateStat('s-costs', totalCosts);
+    const totalBudget = costRows.reduce((s,c)=>s+c.budgeted,0);
+    const totalActual = costRows.reduce((s,c)=>s+c.actual,0);
+    const variance = Math.round(((totalActual-totalBudget)/totalBudget)*100);
+    log(`  ✓ ${costRows.length} cost lines | Budget: $${totalBudget.toLocaleString()} | Actual: $${totalActual.toLocaleString()} | Variance: ${variance>0?'+':''}${variance}%`, variance>8?'warn':'ok');
+
+    // ── Generate Vendor Deliveries ──
+    const vendorRows = [];
+    const deliveriesPerProject = rnd(8, 18);
+    for (let d = 0; d < deliveriesPerProject; d++) {
+      const vendor = pick(VENDORS);
+      const promisedDate = addDays(projStartDate, rnd(0, 45));
+      const isOnTime = Math.random() < vendor.reliability;
+      const delayDays = isOnTime ? rnd(-1,0) : rnd(1, 9);
+      const actualDate = addDays(promisedDate, delayDays);
+
+      vendorRows.push({
+        name: vendor.name,
+        trade: vendor.trade,
+        promised_date: promisedDate,
+        actual_date: actualDate,
+        on_time: isOnTime,
+        notes: !isOnTime ? pick([
+          'No advance notice given — crew was already on-site waiting',
+          'Shipment delayed at regional distribution hub',
+          'Wrong material delivered — had to reorder',
+          'Driver shortage caused 3-day delay',
+          'Manufacturer backorder — not communicated until day-of',
+          'Partial delivery only — remaining items next week',
+          'Price increased without written notice per contract terms',
+          'Damaged goods on arrival — replacement ordered',
+        ]) : pick(['', '', '', 'Delivered ahead of schedule', 'On time, good condition'])
+      });
+    }
+
+    const { error: ve } = await db.from('vendors').insert(vendorRows);
+    if (ve) { log(`  ✗ Vendors error: ${ve.message}`, 'err'); }
+    else {
+      totalVendors += vendorRows.length;
+      updateStat('s-vendors', totalVendors);
+      const onTimeCount = vendorRows.filter(v=>v.on_time).length;
+      const onTimePct = Math.round((onTimeCount/vendorRows.length)*100);
+      log(`  ✓ ${vendorRows.length} deliveries | On-time rate: ${onTimePct}%`, onTimePct < 75 ? 'warn' : 'ok');
+    }
+
+    // ── Generate Inspections ──
+    const inspRows = [];
+    for (let u = proj.unitRange[0]; u <= proj.unitRange[1]; u++) {
+      const quality = crewQuality(proj.crew);
+      const unitRef = `${proj.property} — ${u}`;
+      const unitStartDate = addDays(projStartDate, rnd(0,14));
+
+      // First inspection
+      const passed1 = Math.random() < quality;
+      const punch1 = passed1 ? pick([0,0,1,1,2,2,3]) : pick([2,3,4,5,6,7,8]);
+      const reentry1 = !passed1 && Math.random() < 0.85;
+      const inspDate1 = addDays(unitStartDate, rnd(14,22));
+
+      inspRows.push({
+        unit_ref: unitRef,
+        crew: proj.crew,
+        passed: passed1,
+        punch_count: punch1,
+        re_entry: reentry1,
+        inspected_at: inspDate1,
+        notes: !passed1 ? pick([
+          'Caulking incomplete around tub and vanity',
+          'LVP seam raised in living room — needs reset',
+          'Cabinet door alignment off on upper left',
+          'Paint touch-up missed at trim in bedroom',
+          'Outlet covers missing in kitchen and bath',
+          'Appliance not level — dishwasher leaking',
+          'Grout haze not cleaned from tile backsplash',
+          'Baseboards not caulked at floor transition',
+        ]) : pick(['', 'Clean unit — excellent work', 'Minor items noted, all resolved on-site', ''])
+      });
+
+      // Re-entry inspection if first failed
+      if (reentry1) {
+        const passed2 = Math.random() < 0.88;
+        const punch2 = passed2 ? pick([0,0,0,1,1]) : pick([1,2,3]);
+        inspRows.push({
+          unit_ref: unitRef,
+          crew: proj.crew,
+          passed: passed2,
+          punch_count: punch2,
+          re_entry: false,
+          inspected_at: addDays(inspDate1, rnd(2,5)),
+          notes: passed2 ? 'Re-entry complete — all items resolved' : 'Still outstanding: ' + pick(['caulking','seam issue','door alignment'])
+        });
+      }
+    }
+
+    // Insert inspections in batches
+    for (let i = 0; i < inspRows.length; i += 100) {
+      const batch = inspRows.slice(i, i + 100);
+      const { error: ie } = await db.from('inspections').insert(batch);
+      if (ie) { log(`  ✗ Inspections error: ${ie.message}`, 'err'); }
+    }
+    totalInspections += inspRows.length;
+    updateStat('s-inspections', totalInspections);
+    const passCount = inspRows.filter(i=>i.passed).length;
+    const passPct = Math.round((passCount/inspRows.length)*100);
+    log(`  ✓ ${inspRows.length} inspections | 1st-pass rate: ${passPct}% (${proj.crew})`, passPct < 65 ? 'warn' : 'ok');
+
+    // Small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  setProgress(100, 'Seeding complete!');
+  log('\n' + '━'.repeat(60), 'info');
+  log(`✅ SEEDING COMPLETE`, 'info');
+  log(`   Units:       ${totalUnits}`, 'ok');
+  log(`   Deliveries:  ${totalVendors}`, 'ok');
+  log(`   Cost Lines:  ${totalCosts}`, 'ok');
+  log(`   Inspections: ${totalInspections}`, 'ok');
+  log('\n🎯 Head back to your dashboard to see all data live!', 'info');
+
+  document.getElementById('seed-btn').disabled = false;
+  document.getElementById('clear-btn').disabled = false;
+}
+
+// ══════════════════════════════════════
+// CLEAR ALL
+// ══════════════════════════════════════
+async function clearAll() {
+  if (!confirm('Delete ALL data from all tables? This cannot be undone.')) return;
+  document.getElementById('seed-btn').disabled = true;
+  document.getElementById('clear-btn').disabled = true;
+  log('🗑️  Clearing all tables...', 'warn');
+
+  for (const table of ['inspections','costs','vendors','units']) {
+    const { error } = await db.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) log(`  ✗ Error clearing ${table}: ${error.message}`, 'err');
+    else log(`  ✓ ${table} cleared`, 'ok');
+  }
+
+  ['s-units','s-vendors','s-costs','s-inspections'].forEach(id => document.getElementById(id).textContent = '0');
+  setProgress(0, 'All data cleared');
+  log('✅ All tables cleared — ready to re-seed', 'info');
+
+  document.getElementById('seed-btn').disabled = false;
+  document.getElementById('clear-btn').disabled = false;
+}
+</script>
+</body>
+</html>
